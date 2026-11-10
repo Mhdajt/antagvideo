@@ -14,7 +14,6 @@ jobs:
         run: |
           if [ -f antagvideo_mod_source.zip ]; then
             mkdir -p modsrc && unzip -oq antagvideo_mod_source.zip -d modsrc
-            # Support both root or nested antagvideo_mod directory inside zip
             if [ -d modsrc/antagvideo_mod ]; then
               echo "PROJECT_DIR=modsrc/antagvideo_mod" >> "$GITHUB_ENV"
             else
@@ -29,7 +28,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "25"
 
       - uses: gradle/actions/setup-gradle@v4
         with:
