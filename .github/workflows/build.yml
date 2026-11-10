@@ -1,0 +1,52 @@
+name: Build mod
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Project Directory
+        run: |
+          if [ -f antagvideo_mod_source.zip ]; then
+            mkdir -p modsrc && unzip -oq antagvideo_mod_source.zip -d modsrc
+            # Support both root or nested antagvideo_mod directory inside zip
+            if [ -d modsrc/antagvideo_mod ]; then
+              echo "PROJECT_DIR=modsrc/antagvideo_mod" >> "$GITHUB_ENV"
+            else
+              echo "PROJECT_DIR=modsrc" >> "$GITHUB_ENV"
+            fi
+          elif [ -d antagvideo_mod ]; then
+            echo "PROJECT_DIR=antagvideo_mod" >> "$GITHUB_ENV"
+          else
+            echo "PROJECT_DIR=." >> "$GITHUB_ENV"
+          fi
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: current
+
+      - name: Grant execute permission for gradlew
+        run: |
+          if [ -f "${{ env.PROJECT_DIR }}/gradlew" ]; then
+            chmod +x "${{ env.PROJECT_DIR }}/gradlew"
+          fi
+
+      - name: Build with Gradle
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: gradle build --no-daemon --stacktrace
+
+      - name: Upload the mod jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: antagvideo-mod-jar
+          path: ${{ env.PROJECT_DIR }}/build/libs/*.jar
