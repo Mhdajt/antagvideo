@@ -59,18 +59,20 @@ jobs:
           git tag -d v1.0.0 || true
           git push origin :refs/tags/v1.0.0 || true
 
-          gh release create v1.0.0 "$JAR_FILE" \
-            --title "Antag Video Mod v1.0.0 (Fabric 26.2)" \
-            --notes "### Antag Video Cutscene Player v1.0.0 for Fabric 26.2
+          cat << 'NOTES' > /tmp/release_notes.md
+          ### Antag Video Cutscene Player v1.0.0 for Fabric 26.2
 
-Ready-to-install mod for Minecraft 26.2!
+          Ready-to-install mod for Minecraft 26.2!
 
-#### Installation:
-1. Make sure you have **Fabric Loader (0.19+)** and **Fabric API** installed for Minecraft **26.2**.
-2. Download **\`antagvideo-1.0.0.jar\`** below and place it in your \`.minecraft/mods\` folder.
-3. Launch Minecraft!
+          #### Installation:
+          1. Make sure you have **Fabric Loader (0.19+)** and **Fabric API** installed for Minecraft **26.2**.
+          2. Download **`antagvideo-1.0.0.jar`** below and place it in your `.minecraft/mods` folder.
+          3. Launch Minecraft!
 
-#### In-game Commands:
-- \`/videoplay <video name> <player>\` (e.g. \`/videoplay Intro Steve\` or \`/videoplay Intro @s\`)
-- \`/videostop [player]\`
-- Press **[ESC]** at any time during playback to skip."
+          #### In-game Commands:
+          - `/videoplay <video name> <player>` (e.g. `/videoplay Intro Steve` or `/videoplay Intro @s`)
+          - `/videostop [player]`
+          - Press **[ESC]** at any time during playback to skip.
+          NOTES
+
+          gh release create v1.0.0 "$JAR_FILE"             --title "Antag Video Mod v1.0.0 (Fabric 26.2)"             --notes-file /tmp/release_notes.md
