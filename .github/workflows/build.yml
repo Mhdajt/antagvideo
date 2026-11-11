@@ -1,29 +1,34 @@
-name: Build mod
+name: Build and Release AntagVideo
 
 on:
   push:
+    branches: [ main ]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout antagvideo
+        uses: actions/checkout@v4
 
-      - name: Setup Project Directory
+      - name: Fetch complete Fabric 26.2 source
         run: |
-          if [ -f antagvideo_mod_source.zip ]; then
-            mkdir -p modsrc && unzip -oq antagvideo_mod_source.zip -d modsrc
-            if [ -d modsrc/antagvideo_mod ]; then
-              echo "PROJECT_DIR=modsrc/antagvideo_mod" >> "$GITHUB_ENV"
-            else
-              echo "PROJECT_DIR=modsrc" >> "$GITHUB_ENV"
-            fi
-          elif [ -d antagvideo_mod ]; then
-            echo "PROJECT_DIR=antagvideo_mod" >> "$GITHUB_ENV"
-          else
-            echo "PROJECT_DIR=." >> "$GITHUB_ENV"
-          fi
+          git clone --depth 1 https://github.com/Mhdajt/the-forge.git src_repo
+          cp -rn src_repo/* .
+          cp -rn src_repo/.gitignore . || true
+          rm -rf src_repo
+
+      - name: Configure AntagVideo Mod Branding
+        run: |
+          sed -i 's/"id": "the_forge"/"id": "antagvideo"/g' src/main/resources/fabric.mod.json
+          sed -i 's/"name": "The Forge"/"name": "Antag Video Cutscene"/g' src/main/resources/fabric.mod.json
+          sed -i 's/archives_base_name=the-forge/archives_base_name=antagvideo/g' gradle.properties
+          sed -i 's/maven_group=dev.theforge/maven_group=com.antagvideo/g' gradle.properties
+          sed -i "s/rootProject.name = 'the-forge-video'/rootProject.name = 'antagvideo'/g" settings.gradle
 
       - uses: actions/setup-java@v4
         with:
@@ -34,18 +39,38 @@ jobs:
         with:
           gradle-version: current
 
-      - name: Grant execute permission for gradlew
-        run: |
-          if [ -f "${{ env.PROJECT_DIR }}/gradlew" ]; then
-            chmod +x "${{ env.PROJECT_DIR }}/gradlew"
-          fi
-
       - name: Build with Gradle
-        working-directory: ${{ env.PROJECT_DIR }}
         run: gradle build --no-daemon --stacktrace
 
-      - name: Upload the mod jar
+      - name: Upload the mod jar artifact
         uses: actions/upload-artifact@v4
         with:
-          name: antagvideo-mod-jar
-          path: ${{ env.PROJECT_DIR }}/build/libs/*.jar
+          name: antagvideo-1.0.0-jar
+          path: build/libs/*.jar
+
+      - name: Publish Ready-to-Install JAR to GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          JAR_FILE=$(ls build/libs/antagvideo-[0-9]*.jar | grep -v sources | head -n 1)
+          echo "Found compiled mod jar: $JAR_FILE"
+          
+          gh release delete v1.0.0 --yes || true
+          git tag -d v1.0.0 || true
+          git push origin :refs/tags/v1.0.0 || true
+
+          gh release create v1.0.0 "$JAR_FILE" \
+            --title "Antag Video Mod v1.0.0 (Fabric 26.2)" \
+            --notes "### Antag Video Cutscene Player v1.0.0 for Fabric 26.2
+
+Ready-to-install mod for Minecraft 26.2!
+
+#### Installation:
+1. Make sure you have **Fabric Loader (0.19+)** and **Fabric API** installed for Minecraft **26.2**.
+2. Download **\`antagvideo-1.0.0.jar\`** below and place it in your \`.minecraft/mods\` folder.
+3. Launch Minecraft!
+
+#### In-game Commands:
+- \`/videoplay <video name> <player>\` (e.g. \`/videoplay Intro Steve\` or \`/videoplay Intro @s\`)
+- \`/videostop [player]\`
+- Press **[ESC]** at any time during playback to skip."
